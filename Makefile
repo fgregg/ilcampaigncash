@@ -6,25 +6,8 @@
 # 
 # You must have a .env file with:
 #
-# 	ILCAMPAIGNCASH_FTP_USER=<your-ftp-user>
-# 	ILCAMPAIGNCASH_FTP_PASSWORD=<your-ftp-password>
-# 	PGHOST=<your-pghost>
-# 	PGPORT=<your-pgport>
-# 	PGDATABASE=<your-database-name>
-# 	PGUSER=<your-db-user>
-# 	PGPASSWORD=<your-db-password>
-#
+#       
 ###############################################################################
-
-# Include .env configuration
-include .env
-export
-
-# Activate Python environment
-PIPENV = pipenv run
-
-# Schemas
-SCHEMAS = raw public
 
 # Source tables
 TABLES = $(basename $(notdir $(wildcard sql/tables/*.sql)))
@@ -57,13 +40,13 @@ help:  ## Display this help
 ##@ Database views
 
 define create_view
-	(psql -c "\d public.$(subst db/views/,,$@)" > /dev/null 2>&1 && \
-		echo "view public.$(subst db/views/,,$@) exists") || \
+	(psql -c "\d $(subst db/views/,,$@)" > /dev/null 2>&1 && \
+		echo "view $(subst db/views/,,$@) exists") || \
 	psql -v ON_ERROR_STOP=1 -qX1ef sql/views/$(subst db/views,,$@).sql
 endef
 
 .PHONY: db/views/%
-db/views/%: sql/views/%.sql load db/schemas/public ## Create view % specified in sql/views/%.sql (will load all data)
+db/views/%: sql/views/%.sql load ## Create view % specified in sql/views/%.sql (will load all data)
 	$(call create_view)
 
 .PHONY: db/views/Candidate_Elections
@@ -104,52 +87,18 @@ db/views/Most_Recent_Filings: db/views/Committees db/views/Filed_Docs db/views/D
 
 ##@ Database structure
 
-define create_raw_table
-	@(psql -c "\d raw.$(subst db/tables/,,$@)" > /dev/null 2>&1 && \
-		echo "table raw.$(subst db/tables/,,$@) exists") || \
-	psql -v ON_ERROR_STOP=1 -qX1ef $<
-endef
-
-define create_schema
-	@(psql -c "\dn $(subst db/schemas/,,$@)" | grep $(subst db/schemas/,,$@) > /dev/null 2>&1 && \
-	  echo "schema $(subst db/schemas/,,$@) exists") || \
-	psql -v ON_ERROR_STOP=1 -qaX1ec "CREATE SCHEMA $(subst db/schemas/,,$@)"
-endef
-
-define load_raw_csv
-	@(psql -Atc "select count(*) from raw.$(subst db/csv/,,$@)" | grep -v -w "0" > /dev/null 2>&1 && \
-	 	echo "raw.$(subst db/csv/,,$@) is not empty") || \
-	psql -v ON_ERROR_STOP=1 -qX1ec "\copy raw.$(subst db/csv/,,$@) from '$(CURDIR)/$<' with delimiter ',' csv header;"
-endef
-
-.PHONY: db
-db: ## Create database
-	@(psql -c "SELECT 1" > /dev/null 2>&1 && \
-		echo "database $(PGDATABASE) exists") || \
-	createdb -e $(PGDATABASE) -E UTF8 -T template0 --locale=en_US.UTF-8
+ilcampaigncash.db : ## Create database
+	touch $@
 
 .PHONY: db/vacuum
-db/vacuum: ## Vacuum db
-	psql -v ON_ERROR_STOP=1 -qec "VACUUM ANALYZE;"
-
-.PHONY: db/schemas
-db/schemas: $(patsubst %, db/schemas/%, $(SCHEMAS)) ## Make all schemas
-
-.PHONY: db/schemas/%
-db/schemas/%: db # Create schema % (where % is 'raw', etc)
-	$(call create_schema)
+db/vacuum: ilcampaigncash.db
+	echo "VACUUM ANALYZE;" | sqlite3 $<
 
 .PHONY: db/tables/%
-db/tables/%: sql/tables/%.sql db/schemas/raw # Create table % from sql/tables/%.sql
-	$(call create_raw_table)
+db/tables/%: sql/tables/%.sql data/processed/%.csv # Create table % from sql/tables/%.sql
+	sqlite3 ilcampaigncash.db < $<
+	sqlite3 ilcampaigncash.db < "\copy $* from '$(CURRDIR)/$(word 2, $^)' with csv header"
 
-.PHONY: db/csv/%
-db/csv/%: data/processed/%.csv db/tables/% ## Load table % from data/processed/%.csv
-	$(call load_raw_csv)
-
-.PHONY: dropschema/%
-dropschema/%: # @TODO wrap in detection
-	psql -v ON_ERROR_STOP=1 -qX1c "DROP SCHEMA IF EXISTS $* CASCADE;"
 
 .PHONY: dropdb
 dropdb: ## Drop database
@@ -157,24 +106,14 @@ dropdb: ## Drop database
 
 
 ##@ Data processing
-
 data/download/%.txt: ## Download %.txt (where % is something like Candidates)
-	aria2c -x5 -q -d data/download --ftp-user="$(ILCAMPAIGNCASH_FTP_USER)" --ftp-passwd="$(ILCAMPAIGNCASH_FTP_PASSWORD)" ftp://ftp.elections.il.gov/CampDisclDataFiles/$*.txt
+	wget -O $@ https://www.elections.il.gov/CampaignDisclosureDataFiles/$@
 
 data/processed/%.csv: data/download/%.txt  ## Convert data/download/%.txt to data/processed/%.csv
 	$(PIPENV) python processors/clean_isboe_tsv.py $< $* > $@
 
 
 ##@ Maintenance
-
-.PHONY: install
-install:  ## Install dependencies
-	pipenv install
-
-.PHONY: dbshell
-dbshell: ## Run a database shell
-	psql
-
 .PHONY: clean
 clean: clean/processed clean/download  ## Delete downloads and processed data files
 
