@@ -31,7 +31,7 @@ jobs:
       # Runs a single command using the runners shell
       - name: build database
         run: |- 
-           make
+           make -j 8
            zip il_campaign_disclosures.db.zip il_campaign_disclosures.db
       - name: release
         uses: WebFreak001/deploy-nightly@v1.2.0
