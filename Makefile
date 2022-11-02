@@ -7,8 +7,7 @@
 .PHONY : all
 all : il_campaign_disclosure.db
 
-il_campaign_disclosure.db : raw_CampaignDisclosureDataDictionary.csv	\
-                            raw_Candidates.csv raw_CanElections.csv	\
+il_campaign_disclosure.db : raw_Candidates.csv raw_CanElections.csv	\
                             raw_CmteCandidateLinks.csv			\
                             raw_CmteOfficerLinks.csv			\
                             raw_Committees.csv raw_D2Totals.csv		\
@@ -62,7 +61,8 @@ il_campaign_disclosure.db : raw_CampaignDisclosureDataDictionary.csv	\
 	sqlite-utils add-foreign-keys $@ d2_reports committee_id committees id d2_reports filed_doc_id filed_docs id
 
 	echo "SELECT 'drop table ' || t.name || ';' FROM sqlite_master t where t.name like 'raw_%';" | sqlite3 $@ | sqlite3 $@
-	echo "VACUUM ANALYZE;" | sqlite3 $@
+	echo "VACUUM;" | sqlite3 $@
+	echo "ANALYZE;" | sqlite3 $@
 
 
 ##@ Data processing
