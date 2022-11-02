@@ -1,4 +1,4 @@
-CREATE TABLE public.d2_reports
+CREATE TABLE d2_reports
 AS
   SELECT
     id as id,
@@ -9,7 +9,7 @@ AS
     indivcontribni as individual_non_itemized_contrib,
     xferini as transfer_in_itemized,
     xferinni as transfer_in_non_itemized,
-    loanrvci as loan_received_itemized,
+    loanrcvi as loan_received_itemized,
     loanrcvni as loan_received_non_itemized,
     otherrcti as other_receipts_itemized,
     otherrctni as other_receipts_non_itemized,
@@ -32,8 +32,5 @@ AS
     totalinvest as total_investments,
     endfundsavail as end_funds_available,
     archived as archived
-  FROM raw.d2totals
+  FROM raw_d2totals
 ;
-
-
-ALTER TABLE public.d2_reports ADD PRIMARY KEY (id);

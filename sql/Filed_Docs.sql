@@ -1,4 +1,4 @@
-CREATE TABLE public.filed_docs
+CREATE TABLE filed_docs
 AS
   SELECT
     id as id,
@@ -30,7 +30,6 @@ AS
     archived as archived,
     clarification as clarification,
     redactionrequested as redaction_requested
-  FROM raw.fileddocs
+  FROM raw_fileddocs
 ;
 
-ALTER TABLE public.filed_docs ADD PRIMARY KEY (id);

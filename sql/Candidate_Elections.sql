@@ -1,4 +1,4 @@
-CREATE TABLE public.candidate_elections AS
+CREATE TABLE candidate_elections AS
     SELECT
         id as id,
         candidateid as candidate_id,
@@ -10,9 +10,5 @@ CREATE TABLE public.candidate_elections AS
         limitsoff as limits_off,
         limitsoffreason as limits_off_reason
     FROM
-        raw.canelections
+        raw_CanElections
 ;
-
-ALTER TABLE public.candidate_elections ADD PRIMARY KEY (id);
-
-ALTER TABLE public.candidate_elections ADD CONSTRAINT candidate_election FOREIGN KEY (candidate_id) REFERENCES public.candidates (id) NOT VALID;

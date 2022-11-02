@@ -1,7 +1,7 @@
-CREATE TABLE public.candidates
+CREATE TABLE candidates
 AS
   SELECT
-    id,
+    id as id,
     id as ocd_id,
     lastname as last_name,
     firstname as first_name,
@@ -16,7 +16,5 @@ AS
     residencecounty as residence_county,
     partyaffiliation as party,
     redactionrequested as redaction_requested
-  FROM raw.candidates
+  FROM raw_Candidates
 ;
-
-ALTER TABLE public.candidates ADD PRIMARY KEY (id);

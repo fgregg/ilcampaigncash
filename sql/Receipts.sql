@@ -1,4 +1,4 @@
-CREATE TABLE public.receipts
+CREATE TABLE receipts
 AS
   SELECT
     id as id,
@@ -30,9 +30,5 @@ AS
     archived as archived,
     country as country,
     redactionrequested as redaction_requested
-  FROM raw.receipts
+  FROM raw_Receipts
 ;
-
-ALTER TABLE public.receipts ADD PRIMARY KEY (id);
-
-ALTER TABLE public.receipts ADD CONSTRAINT receipt_committee FOREIGN KEY (committee_id) REFERENCES public.committees (id) NOT VALID;

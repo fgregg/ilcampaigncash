@@ -1,4 +1,4 @@
-CREATE TABLE public.previous_officers AS
+CREATE TABLE previous_officers AS
     SELECT
         id as id,
         committeeid as committee_id,
@@ -13,9 +13,5 @@ CREATE TABLE public.previous_officers AS
         resigndate as resign_date,
         redactionrequested as redaction_requested
     FROM
-        raw.prevofficers
+        raw_prevofficers
 ;
-
-ALTER TABLE public.previous_officers ADD PRIMARY KEY (id);
-
-ALTER TABLE public.previous_officers ADD CONSTRAINT previous_officer_committee FOREIGN KEY (committee_id) REFERENCES public.committees (id) NOT VALID;

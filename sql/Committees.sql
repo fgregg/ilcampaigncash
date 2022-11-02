@@ -1,4 +1,4 @@
-CREATE TABLE public.committees
+CREATE TABLE committees
 AS
   SELECT
     id as id,
@@ -28,7 +28,6 @@ AS
     policysuppopp as policy_position,
     partyaffiliation as party,
     purpose as purpose
-  FROM raw.committees
+  FROM raw_committees
 ;
 
-ALTER TABLE public.committees ADD PRIMARY KEY (id);
