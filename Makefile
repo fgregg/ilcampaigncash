@@ -2,121 +2,72 @@
 #
 # ILLINOIS STATE BOARD OF ELECTION CAMPAIGN FINANCE LOADER
 #
-# Run `make help` to see commands.
-# 
-# You must have a .env file with:
-#
-#       
 ###############################################################################
 
-# Source tables
-TABLES = $(basename $(notdir $(wildcard sql/tables/*.sql)))
+.PHONY : all
+all : il_campaign_disclosure.db
 
-# Views
-VIEWS = $(basename $(notdir $(wildcard sql/views/*.sql)))
+il_campaign_disclosure.db : raw_CampaignDisclosureDataDictionary.csv	\
+                            raw_Candidates.csv raw_CanElections.csv	\
+                            raw_CmteCandidateLinks.csv			\
+                            raw_CmteOfficerLinks.csv			\
+                            raw_Committees.csv raw_D2Totals.csv		\
+                            raw_Expenditures.csv raw_FiledDocs.csv	\
+                            raw_Investments.csv raw_Officers.csv	\
+                            raw_PrevOfficers.csv raw_Receipts.csv
+	csvs-to-sqlite $^ $@
 
+	sqlite3 $@ < sql/Candidates.sql
+	sqlite-utils transform $@ candidates --pk id
 
-##@ Basic usage
+	sqlite3 $@ < sql/Committees.sql
+	sqlite-utils transform $@ committees --pk id
 
-.PHONY: all
-all: views db/vacuum ## Build database
+	sqlite3 $@ < sql/Officers.sql
+	sqlite-utils transform $@ officers --pk id
 
-.PHONY: download
-download: $(patsubst %, data/download/%.txt, $(TABLES)) ## Download source data
+	sqlite3 $@ < sql/Filed_Docs.sql
+	sqlite-utils transform $@ filed_docs --pk id
+	sqlite-utils add-foreign-key $@ filed_docs committee_id committees id
 
-.PHONY: process
-process: $(patsubst %, data/processed/%.csv, $(TABLES)) ## Process source data
+	sqlite3 $@ < sql/Candidate_Elections.sql
+	sqlite-utils transform $@ candidate_elections --pk id
+	sqlite-utils add-foreign-key $@ candidate_elections candidate_id candidates id
+	sqlite3 $@ < sql/Committee_Candidate_Links.sql
+	sqlite-utils transform $@ committee_candidate_links --pk id
+	sqlite-utils add-foreign-keys $@ committee_candidate_links candidate_id candidates id committee_candidate_links committee_id committees id
 
-.PHONY: load
-load: $(patsubst %, db/csv/%, $(TABLES)) ## Process load processed data
+	sqlite3 $@ < sql/Committee_Officer_Links.sql
+	sqlite-utils transform $@ committee_officer_links --pk id
+	sqlite-utils add-foreign-keys $@ committee_officer_links officer_id officers id committee_officer_links committee_id committees id
 
-.PHONY: views
-views: $(patsubst %, db/views/%, $(VIEWS)) ## Create views
+	sqlite3 $@ < sql/Previous_Officers.sql
+	sqlite-utils transform $@ previous_officers --pk id
+	sqlite-utils add-foreign-key $@ previous_officers committee_id committees id
 
-.PHONY: help
-help:  ## Display this help
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z\%\\.\/_-]+:.*?##/ { printf "\033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	sqlite3 $@ < sql/Expenditures.sql
+	sqlite-utils transform $@ expenditures --pk id
+	sqlite-utils add-foreign-keys $@ expenditures committee_id committees id expenditures filed_doc_id filed_docs id
 
-##@ Database views
+	sqlite3 $@ < sql/Receipts.sql
+	sqlite-utils transform $@ receipts --pk id
+	sqlite-utils add-foreign-keys $@ receipts committee_id committees id receipts filed_doc_id filed_docs id 
 
-define create_view
-	(psql -c "\d $(subst db/views/,,$@)" > /dev/null 2>&1 && \
-		echo "view $(subst db/views/,,$@) exists") || \
-	psql -v ON_ERROR_STOP=1 -qX1ef sql/views/$(subst db/views,,$@).sql
-endef
+	sqlite3 $@ < sql/Investments.sql
+	sqlite-utils transform $@ investments --pk id
+	sqlite-utils add-foreign-keys $@ investments committee_id committees id investments filed_doc_id filed_docs id 
 
-.PHONY: db/views/%
-db/views/%: sql/views/%.sql load ## Create view % specified in sql/views/%.sql (will load all data)
-	$(call create_view)
+	sqlite3 $@ < sql/D2_Reports.sql
+	sqlite-utils transform $@ d2_reports --pk id
+	sqlite-utils add-foreign-keys $@ d2_reports committee_id committees id d2_reports filed_doc_id filed_docs id
 
-.PHONY: db/views/Candidate_Elections
-db/views/Candidate_Elections: sql/views/Candidate_Elections.sql db/views/Candidates
-	$(call create_view)
-
-.PHONY: db/views/Committee_Candidate_Links
-db/views/Committee_Candidate_Links: db/views/Committees db/views/Candidates
-	$(call create_view)
-
-.PHONY: db/views/Committee_Officer_Links
-db/views/Committee_Officer_Links: db/views/Committees db/views/Officers
-	$(call create_view)
-
-.PHONY: db/views/Previous_Officers
-db/views/Previous_Officers: db/views/Committees
-	$(call create_view)
-
-.PHONY: db/views/Receipts
-db/views/Receipts: db/views/Committees
-	$(call create_view)
-
-.PHONY: db/views/Expenditures
-db/views/Expenditures: db/views/Committees
-	$(call create_view)
-
-.PHONY: db/views/Condensed_Receipts
-db/views/Condensed_Receipts: db/views/Receipts db/views/Most_Recent_Filings
-	$(call create_view)
-
-.PHONY: db/views/Condensed_Expenditures
-db/views/Condensed_Expenditures: db/views/Expenditures db/views/Most_Recent_Filings
-	$(call create_view)
-
-.PHONY: db/views/Most_Recent_Filings
-db/views/Most_Recent_Filings: db/views/Committees db/views/Filed_Docs db/views/D2_Reports
-	$(call create_view)
-
-##@ Database structure
-
-ilcampaigncash.db : ## Create database
-	touch $@
-
-.PHONY: db/vacuum
-db/vacuum: ilcampaigncash.db
-	echo "VACUUM ANALYZE;" | sqlite3 $<
-
-.PHONY: db/tables/%
-db/tables/%: sql/tables/%.sql data/processed/%.csv # Create table % from sql/tables/%.sql
-	sqlite3 ilcampaigncash.db < $<
-	sqlite3 ilcampaigncash.db < "\copy $* from '$(CURRDIR)/$(word 2, $^)' with csv header"
-
-
-.PHONY: dropdb
-dropdb: ## Drop database
-	dropdb --if-exists -e $(PGDATABASE)
+	echo "SELECT 'drop table ' || t.name || ';' FROM sqlite_master t where t.name like 'raw_%';" | sqlite3 $@ | sqlite3 $@
+	echo "VACUUM ANALYZE;" | sqlite3 $@
 
 
 ##@ Data processing
-data/download/%.txt: ## Download %.txt (where % is something like Candidates)
-	wget -O $@ https://www.elections.il.gov/CampaignDisclosureDataFiles/$@
+%.txt: ## Download %.txt (where % is something like Candidates)
+	wget -O $@ --no-check-certificate https://www.elections.il.gov/CampaignDisclosureDataFiles/$@
 
-data/processed/%.csv: data/download/%.txt  ## Convert data/download/%.txt to data/processed/%.csv
-	$(PIPENV) python processors/clean_isboe_tsv.py $< $* > $@
-
-
-##@ Maintenance
-.PHONY: clean
-clean: clean/processed clean/download  ## Delete downloads and processed data files
-
-.PHONY: clean/%
-clean/%:  ## Clean data/%
-	rm -f data/$*/*
+raw_%.csv: %.txt  ## Convert data/download/%.txt to data/processed/%.csv
+	python processors/clean_isboe_tsv.py $< $* > $@
