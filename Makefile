@@ -48,6 +48,9 @@ il_campaign_disclosure.db : raw_Candidates.csv raw_CanElections.csv	\
 	sqlite-utils transform $@ expenditures --pk id
 	sqlite-utils add-foreign-keys $@ expenditures committee_id committees id expenditures filed_doc_id filed_docs id
 
+	sqlite-utils transform $@ independent_expenditures --pk expenditure_id
+	sqlite-utils add-foreign-key $@ independent_expenditures expenditure_id expenditures id
+
 	sqlite3 $@ < sql/Receipts.sql
 	sqlite-utils transform $@ receipts --pk id
 	sqlite-utils add-foreign-keys $@ receipts committee_id committees id receipts filed_doc_id filed_docs id 

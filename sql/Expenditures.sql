@@ -17,12 +17,20 @@ AS
     zip as zipcode,
     d2part as d2_part,
     purpose as purpose,
-    candidatename as candidate_name,
-    office as office,
-    supporting as supporting,
-    opposing as opposing,
     archived as archived,
     country as country,
     redactionrequested as redaction_requested
   FROM raw_Expenditures
+;
+
+CREATE TABLE independent_expenditures
+AS
+  SELECT
+    id as expenditure_id,
+    candidatename as candidate_name,
+    office as office,
+    supporting as supporting,
+    opposing as opposing,
+  FROM raw_Expenditures
+  WHERE d2part like '9%'
 ;
