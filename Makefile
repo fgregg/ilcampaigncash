@@ -60,6 +60,8 @@ il_campaign_disclosure.db : raw_Candidates.csv raw_CanElections.csv	\
 	sqlite-utils transform $@ d2_reports --pk id
 	sqlite-utils add-foreign-keys $@ d2_reports committee_id committees id d2_reports filed_doc_id filed_docs id
 
+	sqlite-utils extract il_campaign_disclosure.db candidates office district_type district --table offices
+
 	echo "SELECT 'drop table ' || t.name || ';' FROM sqlite_master t where t.name like 'raw_%';" | sqlite3 $@ | sqlite3 $@
 	echo "VACUUM;" | sqlite3 $@
 	echo "ANALYZE;" | sqlite3 $@
