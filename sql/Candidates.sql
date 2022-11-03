@@ -2,7 +2,6 @@ CREATE TABLE candidates
 AS
   SELECT
     id as id,
-    id as ocd_id,
     lastname as last_name,
     firstname as first_name,
     address1 as address_1,
