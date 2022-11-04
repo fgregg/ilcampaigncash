@@ -30,7 +30,7 @@ AS
     candidatename as candidate_name,
     office as office,
     supporting as supporting,
-    opposing as opposing,
+    opposing as opposing
   FROM raw_Expenditures
   WHERE d2part like '9%'
 ;
