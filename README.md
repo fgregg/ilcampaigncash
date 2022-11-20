@@ -2,6 +2,8 @@
 
 Load Illinois campaign fundraising data from the Illinois State Board of Elections.
 
+[Download the sqlite database](https://github.com/fgregg/ilcampaigncash/releases/download/nightly/il_campaign_disclosure.db.zip).
+
 ## Requirements
 
 * GNU Make
