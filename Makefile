@@ -72,7 +72,7 @@ il_campaign_disclosure.db : raw_Candidates.csv raw_CanElections.csv	\
 
 ##@ Data processing
 %.txt: ## Download %.txt (where % is something like Candidates)
-	wget -O $@ --no-check-certificate https://www.elections.il.gov/CampaignDisclosureDataFiles/$@
+	OPENSSL_CONF=`pwd`/openssl_config wget -O $@ --no-check-certificate https://www.elections.il.gov/CampaignDisclosureDataFiles/$@
 
 raw_%.csv: %.txt  ## Convert data/download/%.txt to data/processed/%.csv
 	python processors/clean_isboe_tsv.py $< $* > $@
