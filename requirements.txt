@@ -1,3 +1,2 @@
 sqlite-utils
-csvs-to-sqlite
-pandas<2
+https://github.com/LuighiV/csvs-to-sqlite/archive/refs/heads/main.zip
